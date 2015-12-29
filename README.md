@@ -1,37 +1,15 @@
-# python-protobix
+# zabbixsender
 
 Very simple python module implementing Zabbix Sender protocol.  
 It allows one to build list of items and send them as trapper.
 It currently supports `items` as well as [`Low Level Discovery`](https://www.zabbix.com/documentation/2.4/manual/discovery/low_level_discovery).
 
-## Test
-
-First, launch provided Zabbix Trapper Server:
-
-    python tests/ZabbixServerTrapper.py
-
-Then, launch test suite:
-
-    python setup.py test
-
 ## Install
 
 With `pip`:
 
-    pip install protobix
+    pip install zabbixsender
 
-With `pip` (test version):
-
-    pip install -i https://testpypi.python.org/simple/ protobix
-
-Build `Debian` package:
-
-    apt-get install python-stdeb python-setuptools
-
-    cd module
-    python setup.py --command-packages=stdeb.command bdist_deb
-    apt-get install python-simplejson
-    dpkg -i deb_dist/python-zabbix_0.0.1-1_all.deb
 
 ## Usage
 
@@ -43,10 +21,10 @@ Once module is installed, you can use it as follow
 #!/usr/bin/env python
 
 ''' import module '''
-import protobix
+import zabbixsender
 
 ''' create DataContainer, providing data_type, zabbix server and port '''
-zbx_container = protobix.DataContainer(data_type = "items",
+zbx_container = zabbixsender.DataContainer(data_type = "items",
                                        zbx_host  = '127.0.0.1',
                                        zbx_port  = 10051,
                                        debug     = False,
@@ -91,10 +69,10 @@ print "Everything is OK"
 #!/usr/bin/env python
 
 ''' import module '''
-import protobix
+import zabbixsender
 
 ''' create DataContainer, providing data_type, zabbix server and port '''
-zbx_container = protobix.DataContainer(data_type = "lld",
+zbx_container = zabbixsender.DataContainer(data_type = "lld",
                                        zbx_host  = '127.0.0.1',
                                        zbx_port  = 10051,
                                        debug     = False,

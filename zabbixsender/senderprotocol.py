@@ -1,7 +1,6 @@
 import re
 import socket
 import struct
-import time
 import sys
 try: import simplejson as json
 except ImportError: import json

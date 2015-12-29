@@ -2,7 +2,7 @@ import time
 try: import ujson as json
 except ImportError: import json
 
-from .senderprotocol import SenderProtocol
+from senderprotocol import SenderProtocol
 
 class DataContainer(SenderProtocol):
 
