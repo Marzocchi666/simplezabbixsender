@@ -6,7 +6,7 @@ from distutils.core import setup
 setup(
     name = 'zabbixsender',
     packages = ['zabbixsender'],
-    version = '0.0.8.2',
+    version = '0.0.8.3',
 
     description = 'Implementation of Zabbix Sender protocol',
     long_description = ( 'This module implements Zabbix Sender Protocol.\n'
@@ -18,7 +18,7 @@ setup(
     author_email = 'matt@parr.geek.nz',
     license = 'GPL',
     url='https://github.com/MattParr/zabbix-sender',
-    download_url = 'http://github.com/jbfavre/python-zabbixsender/tarball/0.0.8.2',
+    download_url = 'https://github.com/MattParr/zabbix-sender/tarball/0.0.8.3',
     keywords = ['monitoring','zabbix','trappers'],
     classifiers = [],
    )
