@@ -4,8 +4,8 @@ from distutils.core import setup
 # you can also import from setuptools
 
 setup(
-    name = 'zabbixsender',
-    packages = ['zabbixsender'],
+    name = 'simplezabbixsender',
+    packages = ['simplezabbixsender'],
     version = '0.0.8.3',
 
     description = 'Implementation of Zabbix Sender protocol',

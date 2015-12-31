@@ -1,9 +1,11 @@
 import time
-try: import ujson as json
-except ImportError: import json
+try: 
+    import ujson as json
+except ImportError: 
+    import json
 
 from senderprotocol import SenderProtocol
-
+    
 class DataContainer(SenderProtocol):
 
     REQUEST = "sender data"
@@ -21,28 +23,28 @@ class DataContainer(SenderProtocol):
         self._zbx_host = zbx_host
         self._zbx_port = zbx_port
 
+
     @property
     def data_type(self):
         return self._data_type
 
+
     @data_type.setter
     def data_type(self, value):
         if value in ['lld', 'items']:
-          self._data_type = value
-          # Clean _items_list & _result when changing _data_type
-          # Incompatible format
-          self._items_list = []
-          self._result = []
+            self._data_type = value
+            # Clean _items_list & _result when changing _data_type
+            # Incompatible format
+            self._items_list = []
+            self._result = []
         else:
             raise ValueError('Only support either "items" or "lld"')
+
 
     @property
     def clock(self):
         return int((time.time())/60*60)
 
-    # deprecated function
-    def set_type(self, value):
-        self.data_type = value
 
     def add_item(self, host, key, value, clock=None):
         if clock is None:
@@ -57,8 +59,21 @@ class DataContainer(SenderProtocol):
             raise ValueError('Setup data_type before adding data')
         self._items_list.append(item)
 
+
     def add(self, data):
         for host in data:
             for key in data[host]:
                 if not data[host][key] == []:
                     self.add_item( host, key, data[host][key])
+                    
+class Items(DataContainer):
+    def __init__(self,**kwargs):
+        kwargs['data_type'] = 'lld'
+        DataContainer.__init__(self,**kwargs)
+    
+    
+class LLD(DataContainer):
+    def __init__(self,**kwargs):
+        kwargs['data_type'] = 'lld'
+        DataContainer.__init__(self,**kwargs)
+    

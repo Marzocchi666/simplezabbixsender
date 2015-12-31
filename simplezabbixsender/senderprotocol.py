@@ -2,8 +2,10 @@ import re
 import socket
 import struct
 import sys
-try: import simplejson as json
-except ImportError: import json
+try: 
+    import simplejson as json
+except ImportError: 
+    import json
 
 if sys.version_info < (3,):
     def b(x):
@@ -13,7 +15,7 @@ else:
     def b(x):
         return codecs.utf_8_encode(x)[0]
 
-from .senderexception import SenderException
+from senderexception import SenderException
 
 ZBX_HDR = "ZBXD\1"
 ZBX_HDR_SIZE = 13
