@@ -133,7 +133,13 @@ class Items(object):
     def add_item(self,item):
         self.items.append(item)
         return self
-        
+    
+    
+    def add_items(self, items):
+        for item in items:
+            self.add_item(item)
+        return self
+    
         
     def send(self):
         item_dicts = [item.asdict() for item in self.items]
@@ -184,6 +190,12 @@ class LLD(object):
             row[key] = v
         self.rows.append(row)
         self.clock = get_clock(None)
+        return self
+    
+    
+    def add_rows(self, rows):
+        for row in rows:
+            self.add_row(**row)
         return self
     
     
