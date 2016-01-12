@@ -91,8 +91,8 @@ class ZabbixTrapperResponse(object):
 
 def send(packet, server='127.0.0.1', port=10051, timeout=DEFAULT_SOCKET_TIMEOUT):
     socket.setdefaulttimeout(timeout)
-    data_length = len(packet)
-    data_header = str(struct.pack('q', data_length))
+    packet_length = len(packet)
+    data_header = str(struct.pack('q', packet_length))
     data_to_send = 'ZBXD\1' + str(data_header) + str(packet)
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -115,14 +115,15 @@ def send(packet, server='127.0.0.1', port=10051, timeout=DEFAULT_SOCKET_TIMEOUT)
     return ZabbixTrapperResponse(raw_response)
     
 
-def get_clock(clock):
+def get_clock(clock=None):
     if clock: return clock
     return int(round(time.time()))
 
 
 def get_packet(items_as_list_of_dicts):
     return json.dumps({'request': 'sender data',
-                       'data': items_as_list_of_dicts}
+                       'data': items_as_list_of_dicts,
+                       'clock': get_clock()}
                       )
     
 
