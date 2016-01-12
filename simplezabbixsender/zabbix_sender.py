@@ -4,7 +4,7 @@ import struct
 import re
 try: import simplejson as json
 except ImportError: import json
-from datetime import datetime
+import time
 
 logger = logging.getLogger(__name__)
 DEFAULT_SOCKET_TIMEOUT = 5.0
@@ -38,7 +38,11 @@ class ZabbixTotalSendError(Exception):
 
 def parse_zabbix_response(response):
     match = RESPONSE_REGEX.match(response)
-    return (match.group('processed'),match.group('failed'),match.group('total'),match.group('seconds'))
+    processed = int(match.group('processed'))
+    failed = int(match.group('failed'))
+    total = int(match.group('total'))
+    seconds = float(match.group('seconds')) 
+    return processed,failed,total,seconds
     
     
 def parse_raw_response(raw_response):
@@ -113,7 +117,7 @@ def send(packet, server='127.0.0.1', port=10051, timeout=DEFAULT_SOCKET_TIMEOUT)
 
 def get_clock(clock):
     if clock: return clock
-    return datetime.now()
+    return int(round(time.time()))
 
 
 def get_packet(items_as_list_of_dicts):
@@ -153,7 +157,6 @@ class Item(object):
         self.key = key
         self.value = value
         self.clock = get_clock(clock)
-        return self
         
     
     def send(self,server, port=10051):
@@ -177,7 +180,6 @@ class LLD(object):
         self.key = key
         self.clock = None
         self.rows = []
-        return self
         
 
     def add_row(self, **row_items):
