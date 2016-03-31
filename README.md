@@ -15,22 +15,30 @@ With `pip`:
 
 Once module is installed, you can use it as follow
 
-## Send items as trappers
+## Send item as trappers
 
 ```python
 #!/usr/bin/env python
 
 ''' import module '''
-import zabbixsender
+from simplezabbixsender import Item
 
-''' create DataContainer, providing data_type, zabbix server and port '''
-zbx_container = zabbixsender.DataContainer(data_type = "items",
-                                       zbx_host  = '127.0.0.1',
-                                       zbx_port  = 10051,
-                                       debug     = False,
-                                       dryrun    = False)
-''' set debug '''
-zbx_container.debug = True
+''' create Item, providing item_host, item_key, and item_value with option item_clock_value '''
+item = Item(host = 'my_host', 
+			key = 'trap.key[32]', 
+			value = 3.3333, 
+			clock=None)
+result = item.send(server='172.0.0.1',
+				   port=10051)
+try:
+	result.raise_for_failure()
+except ZabbixTotalSendError:
+	print 'failed to submit item'
+else:
+	print 'item submitted'
+	
+	
+## Send multiple items
 
 ''' set dryrun for testing purpose. Won't send anything to Zabbix '''
 zbx_container.dryrun = True

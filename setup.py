@@ -21,7 +21,7 @@ setup(
     author_email = 'matt@parr.geek.nz',
     license = 'GPL',
     url='https://github.com/MattParr/zabbix-sender',
-    download_url = 'https://github.com/MattParr/zabbix-sender/tarball/0.0.8.3',
+    download_url = 'https://github.com/MattParr/zabbix-sender/tarball/0.0.8.4',
     keywords = ['monitoring','zabbix','trappers'],
     classifiers = [],
    )
