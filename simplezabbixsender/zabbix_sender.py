@@ -2,8 +2,10 @@ import logging
 import socket
 import struct
 import re
-try: import simplejson as json
-except ImportError: import json
+try: 
+    import simplejson as json
+except ImportError: 
+    import json
 import time
 
 logger = logging.getLogger(__name__)
@@ -34,7 +36,19 @@ class ZabbixTotalSendError(Exception):
     def __init__(self, *args):
         self.response = args[0]
         super(ZabbixTotalSendError, self).__init__(u'All traps failed to be processed')
-    
+
+
+def get_clock(clock=None):
+    if clock: return clock
+    return int(round(time.time()))
+
+
+def get_packet(items_as_list_of_dicts):
+    return json.dumps({'request': 'sender data',
+                       'data': items_as_list_of_dicts,
+                       'clock': get_clock()}
+                      )
+        
 
 def parse_zabbix_response(response):
     match = RESPONSE_REGEX.match(response)
@@ -48,6 +62,32 @@ def parse_zabbix_response(response):
 def parse_raw_response(raw_response):
     return json.loads(raw_response)['info']
 
+
+def send(packet, server='127.0.0.1', port=10051, timeout=DEFAULT_SOCKET_TIMEOUT):
+    socket.setdefaulttimeout(timeout)
+    packet_length = len(packet)
+    data_header = str(struct.pack('q', packet_length))
+    data_to_send = 'ZBXD\1' + str(data_header) + str(packet)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.connect((server, port))
+        sock.send(data_to_send)
+    except Exception:
+        logger.exception(u'Error talking to server')
+        raise
+    else:
+        response_header = sock.recv(5)
+        if not response_header == 'ZBXD\1':
+            raise ZabbixInvalidHeaderError(packet)
+    
+        response_data_header = sock.recv(8)
+        response_data_header = response_data_header[:4]
+        response_len = struct.unpack('i', response_data_header)[0]
+        raw_response = sock.recv(response_len)
+    finally:
+        sock.close()
+    return ZabbixTrapperResponse(raw_response)
+    
 
 class ZabbixTrapperResponse(object):
     def __init__(self, raw_response):
@@ -89,44 +129,29 @@ class ZabbixTrapperResponse(object):
             raise ZabbixPartialSendError(self)
     
 
-def send(packet, server='127.0.0.1', port=10051, timeout=DEFAULT_SOCKET_TIMEOUT):
-    socket.setdefaulttimeout(timeout)
-    packet_length = len(packet)
-    data_header = str(struct.pack('q', packet_length))
-    data_to_send = 'ZBXD\1' + str(data_header) + str(packet)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        sock.connect((server, port))
-        sock.send(data_to_send)
-    except Exception:
-        logger.exception(u'Error talking to server')
-        raise
-    else:
-        response_header = sock.recv(5)
-        if not response_header == 'ZBXD\1':
-            raise ZabbixInvalidHeaderError(packet)
+class Item(object):
+    def __init__(self, host, key, value, clock = None):
+        self.host = host
+        self.key = key
+        self.value = value
+        self.clock = get_clock(clock)
+        
     
-        response_data_header = sock.recv(8)
-        response_data_header = response_data_header[:4]
-        response_len = struct.unpack('i', response_data_header)[0]
-        raw_response = sock.recv(response_len)
-    finally:
-        sock.close()
-    return ZabbixTrapperResponse(raw_response)
+    def send(self,server, port=10051):
+        item_dicts = [self._asdict()]
+        packet = get_packet(item_dicts)
+        return send(packet, server, port)
     
-
-def get_clock(clock=None):
-    if clock: return clock
-    return int(round(time.time()))
-
-
-def get_packet(items_as_list_of_dicts):
-    return json.dumps({'request': 'sender data',
-                       'data': items_as_list_of_dicts,
-                       'clock': get_clock()}
-                      )
     
+    def asdict(self):
+        return {
+            'host': self.host,
+            'key': self.key,
+            'value': self.value,
+            'clock' : self.clock
+        }
 
+        
 class Items(object):
     def __init__(self,server='127.0.0.1', port=10051):
         self.server = server
@@ -147,34 +172,11 @@ class Items(object):
     
         
     def send(self):
-        item_dicts = [item.asdict() for item in self.items]
+        item_dicts = [item._asdict() for item in self.items]
         packet = get_packet(item_dicts)
         return send(packet, self.server, self.port)
         
-        
-class Item(object):
-    def __init__(self, host, key, value, clock = None):
-        self.host = host
-        self.key = key
-        self.value = value
-        self.clock = get_clock(clock)
-        
     
-    def send(self,server, port=10051):
-        item_dicts = [self.asdict()]
-        packet = get_packet(item_dicts)
-        return send(packet, server, port)
-    
-    
-    def asdict(self):
-        return {
-            'host': self.host,
-            'key': self.key,
-            'value': self.value,
-            'clock' : self.clock
-        }
-
-        
 class LLD(object):
     def __init__(self, host, key, format_key=True, key_template='{#%s}'):
         self.host = host
@@ -196,19 +198,19 @@ class LLD(object):
         return self
     
     
-    def add_rows(self, rows):
-        for row in rows:
+    def add_rows(self, list_of_dicts):
+        for row in list_of_dicts:
             self.add_row(**row)
         return self
     
     
     def send(self, server, port=10051):
-        item_dicts = [self.asdict()]
+        item_dicts = [self._asdict()]
         packet = get_packet(item_dicts)
         return send(packet, server, port)
     
     
-    def asdict(self):
+    def _asdict(self):
         return {
             'host': self.host,
             'key': self.key,
