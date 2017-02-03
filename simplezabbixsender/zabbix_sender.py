@@ -8,6 +8,8 @@ except ImportError:
     import json
 import time
 
+__version__ = '1.0.0'
+
 logger = logging.getLogger(__name__)
 DEFAULT_SOCKET_TIMEOUT = 5.0
 RESPONSE_REGEX_STRING = r'[Pp]rocessed:? (?P<processed>\d+);? [Ff]ailed:? (?P<failed>\d+);? [Tt]otal:? (?P<total>\d+);? [Ss]econds spent:? (?P<seconds>\d+\.\d+)'
@@ -138,7 +140,7 @@ class Item(object):
         
     
     def send(self,server, port=10051):
-        item_dicts = [self._asdict()]
+        item_dicts = [self.asdict()]
         packet = get_packet(item_dicts)
         return send(packet, server, port)
     
@@ -157,7 +159,6 @@ class Items(object):
         self.server = server
         self.port = port
         self.items = []
-        return self
     
     
     def add_item(self,item):
@@ -172,7 +173,7 @@ class Items(object):
     
         
     def send(self):
-        item_dicts = [item._asdict() for item in self.items]
+        item_dicts = [item.asdict() for item in self.items]
         packet = get_packet(item_dicts)
         return send(packet, self.server, self.port)
         
@@ -183,6 +184,8 @@ class LLD(object):
         self.key = key
         self.clock = None
         self.rows = []
+        self.format_key = format_key
+        self.key_template = key_template
         
 
     def add_row(self, **row_items):
@@ -205,12 +208,12 @@ class LLD(object):
     
     
     def send(self, server, port=10051):
-        item_dicts = [self._asdict()]
+        item_dicts = [self.asdict()]
         packet = get_packet(item_dicts)
         return send(packet, server, port)
     
     
-    def _asdict(self):
+    def asdict(self):
         return {
             'host': self.host,
             'key': self.key,
