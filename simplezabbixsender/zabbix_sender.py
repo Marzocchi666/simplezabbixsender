@@ -1,3 +1,4 @@
+import sys
 import logging
 import socket
 import struct
@@ -8,12 +9,20 @@ except ImportError:
     import json
 import time
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 logger = logging.getLogger(__name__)
 DEFAULT_SOCKET_TIMEOUT = 5.0
 RESPONSE_REGEX_STRING = r'[Pp]rocessed:? (?P<processed>\d+);? [Ff]ailed:? (?P<failed>\d+);? [Tt]otal:? (?P<total>\d+);? [Ss]econds spent:? (?P<seconds>\d+\.\d+)'
 RESPONSE_REGEX = re.compile(RESPONSE_REGEX_STRING)
+
+PY2 = sys.version_info[0] == 2
+STRING_ZABBIX_HEADER = 'ZBXD\1'
+BYTE_ZABBIX_HEADER = b'ZBXD\1'
+if PY2:
+    ZABBIX_HEADER = STRING_ZABBIX_HEADER
+else:
+    ZABBIX_HEADER = BYTE_ZABBIX_HEADER
 
 class ZabbixInvalidHeaderError(Exception):
     def __init__(self, *args):
@@ -65,11 +74,29 @@ def parse_raw_response(raw_response):
     return json.loads(raw_response)['info']
 
 
+def get_data_to_send(packet):
+    packet_length = len(packet)
+    data_header = struct.pack('q', packet_length)
+    if not PY2:
+        packet = packet.encode('utf-8')
+    return ZABBIX_HEADER + data_header + packet
+    
+    
+def get_raw_response(sock):
+    response_data_header = sock.recv(8)
+    response_data_header = response_data_header[:4]
+    response_len = struct.unpack('i', response_data_header)[0]
+    if PY2:
+        raw_response = sock.recv(response_len)
+    else:
+        raw_response = sock.recv(response_len).decode('utf-8')
+    return raw_response
+
+
 def send(packet, server='127.0.0.1', port=10051, timeout=DEFAULT_SOCKET_TIMEOUT):
     socket.setdefaulttimeout(timeout)
-    packet_length = len(packet)
-    data_header = str(struct.pack('q', packet_length))
-    data_to_send = 'ZBXD\1' + str(data_header) + str(packet)
+
+    data_to_send = get_data_to_send(packet)
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         sock.connect((server, port))
@@ -79,13 +106,9 @@ def send(packet, server='127.0.0.1', port=10051, timeout=DEFAULT_SOCKET_TIMEOUT)
         raise
     else:
         response_header = sock.recv(5)
-        if not response_header == 'ZBXD\1':
-            raise ZabbixInvalidHeaderError(packet)
-    
-        response_data_header = sock.recv(8)
-        response_data_header = response_data_header[:4]
-        response_len = struct.unpack('i', response_data_header)[0]
-        raw_response = sock.recv(response_len)
+        if not response_header == ZABBIX_HEADER:
+            raise ZabbixInvalidHeaderError(packet)        
+        raw_response = get_raw_response(sock)
     finally:
         sock.close()
     return ZabbixTrapperResponse(raw_response)
