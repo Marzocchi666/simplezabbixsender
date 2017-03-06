@@ -1,4 +1,4 @@
-from zabbix_sender import (Item,
+from .zabbix_sender import (Item,
                            Items,  
                            LLD, 
                            ZabbixInvalidHeaderError,
