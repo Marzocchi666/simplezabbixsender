@@ -1,6 +1,7 @@
 from .zabbix_sender import (Item,
                            Items,  
-                           LLD, 
+                           LLD,
+                           Host, 
                            ZabbixInvalidHeaderError,
                            ZabbixInvalidResponseError,
                            ZabbixPartialSendError,

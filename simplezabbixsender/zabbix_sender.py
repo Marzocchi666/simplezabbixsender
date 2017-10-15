@@ -9,10 +9,10 @@ except ImportError:
     import json
 import time
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 logger = logging.getLogger(__name__)
-DEFAULT_SOCKET_TIMEOUT = 5.0
+DEFAULT_SOCKET_TIMEOUT = 30.0
 RESPONSE_REGEX_STRING = r'[Pp]rocessed:? (?P<processed>\d+);? [Ff]ailed:? (?P<failed>\d+);? [Tt]otal:? (?P<total>\d+);? [Ss]econds spent:? (?P<seconds>\d+\.\d+)'
 RESPONSE_REGEX = re.compile(RESPONSE_REGEX_STRING)
 
@@ -34,19 +34,22 @@ class ZabbixInvalidHeaderError(Exception):
 class ZabbixInvalidResponseError(Exception):
     def __init__(self, *args):
         self.raw_response = args[0]
-        super(ZabbixInvalidResponseError, self).__init__(u'Invalid response from server')
+        super(ZabbixInvalidResponseError, self).__init__(
+            u'Invalid response from server')
   
     
 class ZabbixPartialSendError(Exception):
     def __init__(self, *args):
         self.response = args[0]
-        super(ZabbixPartialSendError, self).__init__(u'Some traps failed to be processed')
+        super(ZabbixPartialSendError, self).__init__(
+            u'Some traps failed to be processed')
     
     
 class ZabbixTotalSendError(Exception):
     def __init__(self, *args):
         self.response = args[0]
-        super(ZabbixTotalSendError, self).__init__(u'All traps failed to be processed')
+        super(ZabbixTotalSendError, self).__init__(
+            u'All traps failed to be processed')
 
 
 def get_clock(clock=None):
@@ -93,7 +96,10 @@ def get_raw_response(sock):
     return raw_response
 
 
-def send(packet, server='127.0.0.1', port=10051, timeout=DEFAULT_SOCKET_TIMEOUT):
+def send(packet, 
+         server='127.0.0.1', 
+         port=10051, 
+         timeout=DEFAULT_SOCKET_TIMEOUT):
     socket.setdefaulttimeout(timeout)
 
     data_to_send = get_data_to_send(packet)
@@ -152,6 +158,14 @@ class ZabbixTrapperResponse(object):
             raise ZabbixTotalSendError(self)
         if self.failed > 0:
             raise ZabbixPartialSendError(self)
+        
+        
+    def __repr__(self, *args, **kwargs):
+        return self.__str__()
+    
+    
+    def __str__(self):
+        return self.raw_response
     
 
 class Item(object):
@@ -213,7 +227,7 @@ class LLD(object):
 
     def add_row(self, **row_items):
         row = {}
-        for k,v in row_items.iteritems():
+        for k,v in row_items.items():
             if self.format_key:
                 key = self.key_template % k
             else:
@@ -247,4 +261,17 @@ class LLD(object):
     def _get_value(self):
         return json.dumps({'data': self.rows})
     
+    
+class Host(object):
+    def __init__(self, server, host):
+        self.server = server
+        self.host = host
+        self.items = Items(server=server)
         
+    
+    def add_item(self, key, value, clock=None):
+        self.items.add_item(Item(self.host, key, value, clock))
+        
+        
+    def send(self):
+        self.items.send()        

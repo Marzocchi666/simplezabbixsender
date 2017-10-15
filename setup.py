@@ -6,7 +6,7 @@ from distutils.core import setup
 setup(
     name = 'simplezabbixsender',
     packages = ['simplezabbixsender'],
-    version = '1.0.2',
+    version = '1.0.3',
 
     description = 'Implementation of Zabbix Sender protocol',
     long_description = ( 'This module implements Zabbix Sender Protocol.\n'
