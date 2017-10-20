@@ -8,14 +8,15 @@ try:
 except ImportError: 
     import json
 import time
+from past.builtins import xrange
 
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 
 logger = logging.getLogger(__name__)
-DEFAULT_SOCKET_TIMEOUT = 30.0
+DEFAULT_SOCKET_TIMEOUT = 60.0
 RESPONSE_REGEX_STRING = r'[Pp]rocessed:? (?P<processed>\d+);? [Ff]ailed:? (?P<failed>\d+);? [Tt]otal:? (?P<total>\d+);? [Ss]econds spent:? (?P<seconds>\d+\.\d+)'
 RESPONSE_REGEX = re.compile(RESPONSE_REGEX_STRING)
-
+MAX_ITEMS_PER_SEND = 250
 PY2 = sys.version_info[0] == 2
 STRING_ZABBIX_HEADER = 'ZBXD\1'
 BYTE_ZABBIX_HEADER = b'ZBXD\1'
@@ -28,7 +29,7 @@ class ZabbixInvalidHeaderError(Exception):
     def __init__(self, *args):
         self.raw_response = args[0]
         super(ZabbixInvalidHeaderError, self).__init__(
-            u'Invalid header during response from server')
+            u'Invalid header during response from server', *args)
   
     
 class ZabbixInvalidResponseError(Exception):
@@ -113,7 +114,7 @@ def send(packet,
     else:
         response_header = sock.recv(5)
         if not response_header == ZABBIX_HEADER:
-            raise ZabbixInvalidHeaderError(packet)        
+            raise ZabbixInvalidHeaderError(packet, response_header)        
         raw_response = get_raw_response(sock)
     finally:
         sock.close()
@@ -125,7 +126,8 @@ class ZabbixTrapperResponse(object):
         self.processed = None
         self.failed = None
         self.total = None
-        self.seconds = None       
+        self.seconds = None
+        self.items = []
         self.raw_response = raw_response
         response = self.parse_raw_response()
         self.parse_response(response)
@@ -151,6 +153,11 @@ class ZabbixTrapperResponse(object):
             raise ZabbixInvalidResponseError(self.raw_response)
         else:
             return response
+    
+    
+    def re_send_as_singles(self):
+        for item in self.items:
+            item.send(self.server, port=self.port)
         
         
     def raise_for_failure(self):
@@ -165,6 +172,9 @@ class ZabbixTrapperResponse(object):
     
     
     def __str__(self):
+        if self.failed:
+            if len(self.items) == 1:
+                return '{} {}'.format(self.raw_response, self.items)
         return self.raw_response
     
 
@@ -179,7 +189,11 @@ class Item(object):
     def send(self,server, port=10051):
         item_dicts = [self.asdict()]
         packet = get_packet(item_dicts)
-        return send(packet, server, port)
+        result = send(packet, server, port)
+        if result.failed:
+            logger.error('item failed %s, %s',result, self.asdict())
+            result.items.append(self)
+        return result
     
     
     def asdict(self):
@@ -208,11 +222,25 @@ class Items(object):
             self.add_item(item)
         return self
     
+    
+    @property
+    def _send_batches(self):
+        for i in xrange(0, len(self.items), MAX_ITEMS_PER_SEND):
+            yield self.items[i:i + MAX_ITEMS_PER_SEND]
+            
         
     def send(self):
-        item_dicts = [item.asdict() for item in self.items]
-        packet = get_packet(item_dicts)
-        return send(packet, self.server, self.port)
+        results = []
+        for batch in self._send_batches:
+            item_dicts = [item.asdict() for item in batch]
+            packet = get_packet(item_dicts)
+            result = send(packet, self.server, self.port)
+            if result.failed:
+                result.items = batch
+                result.server = self.server
+                result.port = self.port
+            results.append(result)
+        return results
         
     
 class LLD(object):
@@ -247,7 +275,13 @@ class LLD(object):
     def send(self, server, port=10051):
         item_dicts = [self.asdict()]
         packet = get_packet(item_dicts)
-        return send(packet, server, port)
+        result = send(packet, server, port)
+        if result.failed:
+            logger.error('sending failed %s %s', result, self.asdict())
+            result.items.append(self)
+            result.server = server
+            result.port = port
+        return result
     
     
     def asdict(self):
@@ -262,6 +296,10 @@ class LLD(object):
         return json.dumps({'data': self.rows})
     
     
+    def __str__(self):
+        return '{}:{}'.format(self.host, self.key)
+    
+    
 class Host(object):
     def __init__(self, server, host):
         self.server = server
@@ -274,4 +312,5 @@ class Host(object):
         
         
     def send(self):
-        self.items.send()        
+        return self.items.send()
+                

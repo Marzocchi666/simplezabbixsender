@@ -3,10 +3,14 @@
 from distutils.core import setup
 # you can also import from setuptools
 
+requirements = [
+    'future',
+]
+
 setup(
     name = 'simplezabbixsender',
     packages = ['simplezabbixsender'],
-    version = '1.0.3',
+    version = '1.0.4',
 
     description = 'Implementation of Zabbix Sender protocol',
     long_description = ( 'This module implements Zabbix Sender Protocol.\n'
@@ -16,12 +20,11 @@ setup(
                          'Based on the work by:\n'
                          'Jean Baptiste Favre @ https://github.com/jbfavre\n'
                          'kurt @ https://github.com/kmomberg\n'
-                         ),    
+                         ),
+    install_requires=requirements,
     author = 'Matt Parr',
     author_email = 'matt@parr.geek.nz',
     license = 'GPL',
-    url='https://github.com/MattParr/zabbix-sender',
-    download_url = 'https://github.com/MattParr/zabbix-sender/tarball/0.0.8.4',
     keywords = ['monitoring','zabbix','trappers'],
     classifiers = [],
    )
